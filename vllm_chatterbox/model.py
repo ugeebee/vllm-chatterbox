@@ -161,6 +161,7 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
             input_ids=None,
             position_ids=positions,
             inputs_embeds=inputs_embeds,
+            intermediate_tensors=intermediate_tensors,
             **kwargs,
         )
         return hidden_states
