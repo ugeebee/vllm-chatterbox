@@ -20,11 +20,13 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         self.vllm_config = vllm_config
         self.cfg = vllm_config.model_config
         
-        # FORCIBLY override the config to ensure the word embeddings are 8196
-        # The config.json on disk has an incorrect value causing shape [1024, 1024]
-        self.cfg.hf_config.vocab_size = 8196
+        self.t3conf = T3Config()
+        
+        # FORCIBLY override the config to ensure the engine sampler knows the true output size
+        # If this is left at 8196, FlashInfer expects 8196 but gets 6563 and segfaults!
+        self.cfg.hf_config.vocab_size = self.t3conf.speech_tokens_dict_size
         if hasattr(self.cfg, "vocab_size"):
-            self.cfg.vocab_size = 8196
+            self.cfg.vocab_size = self.t3conf.speech_tokens_dict_size
 
         # We initialize the backbone using GPT2LMHeadModel
         # But we don't need its lm_head. We will just use its transformer backbone
@@ -33,7 +35,6 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         if hasattr(self.gpt2, "lm_head"):
             del self.gpt2.lm_head
 
-        self.t3conf = T3Config()
         self.dim = self.t3conf.n_channels
 
         self.speech_emb = nn.Embedding(self.t3conf.speech_tokens_dict_size, self.dim)
