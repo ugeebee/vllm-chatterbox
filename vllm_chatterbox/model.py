@@ -19,6 +19,12 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         nn.Module.__init__(self)
         self.vllm_config = vllm_config
         self.cfg = vllm_config.model_config
+        
+        # FORCIBLY override the config to ensure the word embeddings are 8196
+        # The config.json on disk has an incorrect value causing shape [1024, 1024]
+        self.cfg.hf_config.vocab_size = 8196
+        if hasattr(self.cfg, "vocab_size"):
+            self.cfg.vocab_size = 8196
 
         # We initialize the backbone using GPT2LMHeadModel
         # But we don't need its lm_head. We will just use its transformer backbone
