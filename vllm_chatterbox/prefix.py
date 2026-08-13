@@ -7,7 +7,7 @@ from .modules.cond_enc import T3Cond, T3CondEnc
 from .modules.learned_pos_emb import LearnedPositionEmbeddings
 
 class PrefixBuilder(nn.Module):
-    def __init__(self, config: T3Config, text_tokens_dict_size: int = 2454):
+    def __init__(self, config: T3Config, text_tokens_dict_size: int = 50276):
         super().__init__()
         self.config = config
         self.dim = config.n_channels
