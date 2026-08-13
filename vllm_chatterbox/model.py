@@ -51,10 +51,14 @@ class T3TurboForCausalLM(nn.Module):
         # causes massive RAM thrashing and freezes the server during load.
         def gpt2_weight_generator():
             for name, weight in weights:
-                if name.startswith("transformer."):
+                if "speech_head" in name or "speech_emb" in name:
+                    # Intercept T3-specific components so they don't crash GPT2Model.
+                    # We strip the transformer prefix so they map directly to our class variables.
+                    clean_name = name.replace("transformer.", "").replace("tfmr.", "")
+                    state_dict[clean_name] = weight
+                elif name.startswith("transformer."):
                     yield name, weight
                 else:
-                    # Speech head weights are tiny, so it's safe to store them in a dict
                     state_dict[name] = weight
 
         # Load backbone eagerly via generator
