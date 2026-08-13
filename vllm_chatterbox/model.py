@@ -59,6 +59,10 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         # causes massive RAM thrashing and freezes the server during load.
         def gpt2_weight_generator():
             for name, weight in weights:
+                if "wte.weight" in name or "wpe.weight" in name:
+                    # Skip standard GPT2 embeddings. T3 passes inputs_embeds natively
+                    # for text, and uses custom speech_emb for audio.
+                    continue
                 if "speech_head" in name or "speech_emb" in name:
                     # Intercept T3-specific components so they don't crash GPT2Model.
                     # We strip the transformer prefix so they map directly to our class variables.
