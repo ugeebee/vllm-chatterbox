@@ -166,7 +166,8 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         )
         return hidden_states
 
-    def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata) -> torch.Tensor:
+    def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata=None, *args, **kwargs) -> torch.Tensor:
         # Use our speech head instead of text lm_head
-        logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata)
+        # In vLLM V1, dummy runs might pass only hidden_states without sampling_metadata
+        logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata, *args, **kwargs)
         return logits
