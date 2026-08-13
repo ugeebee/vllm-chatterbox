@@ -44,7 +44,7 @@ class T3TurboForCausalLM(nn.Module):
         # To track prefix lengths per sequence
         self.prefix_lengths = {}
 
-    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]) -> set[str]:
+    def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
         state_dict = {}
         
         # We must use a lazy generator! Storing all memory-mapped tensors in a list 
