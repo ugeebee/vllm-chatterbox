@@ -1,0 +1,22 @@
+[project]
+name = "vllm-chatterbox"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ugeebee", email = "ugbhartariya@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "vllm>=0.27.1",
+]
+
+[project.scripts]
+vllm-chatterbox = "vllm_chatterbox:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[project.entry-points."vllm.general_plugins"]
+register_chatterbox = "vllm_chatterbox.plugin:register"
