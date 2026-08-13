@@ -47,7 +47,8 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
             prefix=prefix + ".speech_head",
         )
 
-        self.logits_processor = self.gpt2.logits_processor
+        from vllm.model_executor.layers.logits_processor import LogitsProcessor
+        self.logits_processor = LogitsProcessor(self.t3conf.speech_tokens_dict_size)
 
         # To track prefix lengths per sequence
         self.prefix_lengths = {}
