@@ -25,14 +25,17 @@ async def startup_event():
     
     # Prefix builder logic
     prefix_builder = PrefixBuilder(config)
-    # We would normally load weights into prefix_builder here
-    # e.g., prefix_builder.load_weights(torch.load("path_to_t3_weights.pt"))
+    
+    # Load the raw weights into prefix builder
+    from safetensors.torch import load_file
+    raw_weights = load_file("/home/ssm-user/models/chatterbox-turbo/t3_turbo_v1.safetensors")
+    prefix_builder.load_weights(raw_weights)
+    
     prefix_builder.eval()
 
     # Initialize vLLM AsyncLLMEngine
     engine_args = AsyncEngineArgs(
-        model="dummy_path_since_weights_are_loaded_custom", # This needs to point to a valid HF format dir if needed
-        # We can also register our plugin explicitly if not picked up via entry points
+        model="/home/ssm-user/models/chatterbox-turbo/t3-hf-format",
         worker_use_ray=False,
     )
     # For now we assume engine loads the registered T3TurboForCausalLM
@@ -43,13 +46,9 @@ async def startup_event():
 async def generate_speech(
     text: str = Form(...)
 ):
-    # The user requested to use a default audio instead of dynamically processing reference audio clips.
-    # In production, you would load the default condition from `conds.pt` like this:
-    # default_cond_dict = torch.load("/home/ubuntu/models/chatterbox-turbo/conds.pt", map_location="cpu")
-    # cond = T3Cond(**default_cond_dict["default"])
-    
-    # For now, we mock the default condition so the API functions:
-    cond = T3Cond(speaker_emb=torch.randn(1, 256)) 
+    # Load the default condition from the conds.pt file you downloaded
+    default_cond_dict = torch.load("/home/ssm-user/models/chatterbox-turbo/conds.pt", map_location="cpu", weights_only=True)
+    cond = T3Cond(**default_cond_dict["default"])
 
     # Text tokenization (mock using config defaults)
     # text_ids should come from an EnTokenizer or similar
