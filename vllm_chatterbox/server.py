@@ -41,15 +41,15 @@ async def startup_event():
 
 @app.post("/generate_speech")
 async def generate_speech(
-    text: str = Form(...),
-    reference_audio: Optional[UploadFile] = None
+    text: str = Form(...)
 ):
-    # Dummy processing of reference audio/cond
-    # In a real setup, we would extract speaker_emb, emotion, etc.
-    if reference_audio:
-        cond = T3Cond(speaker_emb=torch.randn(1, 256)) # Mock condition
-    else:
-        cond = None
+    # The user requested to use a default audio instead of dynamically processing reference audio clips.
+    # In production, you would load the default condition from `conds.pt` like this:
+    # default_cond_dict = torch.load("/home/ubuntu/models/chatterbox-turbo/conds.pt", map_location="cpu")
+    # cond = T3Cond(**default_cond_dict["default"])
+    
+    # For now, we mock the default condition so the API functions:
+    cond = T3Cond(speaker_emb=torch.randn(1, 256)) 
 
     # Text tokenization (mock using config defaults)
     # text_ids should come from an EnTokenizer or similar
