@@ -159,7 +159,7 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         # Now we pass it to GPT2 transformer backbone
         hidden_states = self.gpt2.transformer(
             input_ids=None,
-            positions=positions,
+            position_ids=positions,
             inputs_embeds=inputs_embeds,
             **kwargs,
         )
