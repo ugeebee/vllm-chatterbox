@@ -12,9 +12,11 @@ from .modules.t3_config import T3Config
 from .modules.learned_pos_emb import LearnedPositionEmbeddings
 
 
-class T3TurboForCausalLM(nn.Module):
+class T3TurboForCausalLM(GPT2LMHeadModel):
     def __init__(self, *, vllm_config: VllmConfig, prefix: str = ""):
-        super().__init__()
+        # We explicitly call nn.Module.__init__ to skip GPT2LMHeadModel.__init__
+        # This prevents it from creating duplicate text components we don't want
+        nn.Module.__init__(self)
         self.vllm_config = vllm_config
         self.cfg = vllm_config.model_config
 
