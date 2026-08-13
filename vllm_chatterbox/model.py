@@ -168,13 +168,5 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
 
     def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata=None, *args, **kwargs) -> torch.Tensor:
         # Use our speech head instead of text lm_head
-        if sampling_metadata is None:
-            # We are in a dummy run (or a V1 engine context that handles sampling externally).
-            # Calling logits_processor with None will crash the C++ backend!
-            logits = self.speech_head(hidden_states)
-            if isinstance(logits, tuple):
-                logits = logits[0]
-            return logits
-            
         logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata, *args, **kwargs)
         return logits
