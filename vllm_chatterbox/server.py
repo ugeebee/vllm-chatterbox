@@ -43,7 +43,6 @@ async def startup_event():
     # Initialize vLLM AsyncLLMEngine
     engine_args = AsyncEngineArgs(
         model="/home/ssm-user/models/chatterbox-turbo/t3-hf-format",
-        worker_use_ray=False,
     )
     # For now we assume engine loads the registered T3TurboForCausalLM
     engine = AsyncLLMEngine.from_engine_args(engine_args)
