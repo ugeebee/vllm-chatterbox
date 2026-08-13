@@ -44,24 +44,21 @@ class T3TurboForCausalLM(nn.Module):
         # To track prefix lengths per sequence
         self.prefix_lengths = {}
 
-    def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]) -> set[str]:
-        # T3 saved state_dict keys need to map to GPT2 backbone + custom embeddings
-        loaded_params: set[str] = set()
-        
-        gpt2_weights = []
+    def load_weights(self, weights: Iterable[Tuple[str, torch.Tensor]]) -> set[str]:
         state_dict = {}
-
-        for name, weight in weights:
-            # Route GPT2 backbone weights
-            if name.startswith("transformer."):
-                # vLLM's GPT2 expects 'transformer.' prefix
-                gpt2_weights.append((name, weight))
-            else:
-                state_dict[name] = weight
         
-        # Load GPT2 weights
-        gpt2_loaded = self.gpt2.load_weights(gpt2_weights)
-        loaded_params.update(gpt2_loaded)
+        # We must use a lazy generator! Storing all memory-mapped tensors in a list 
+        # causes massive RAM thrashing and freezes the server during load.
+        def gpt2_weight_generator():
+            for name, weight in weights:
+                if name.startswith("transformer."):
+                    yield name, weight
+                else:
+                    # Speech head weights are tiny, so it's safe to store them in a dict
+                    state_dict[name] = weight
+
+        # Load backbone eagerly via generator
+        loaded_params = self.gpt2.load_weights(gpt2_weight_generator())
         
         # Load our custom components
         if "speech_emb.weight" in state_dict:
