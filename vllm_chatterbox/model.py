@@ -22,11 +22,7 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         
         self.t3conf = T3Config()
         
-        # FORCIBLY override the config to ensure the engine sampler knows the true output size
-        # If this is left at 8196, FlashInfer expects 8196 but gets 6563 and segfaults!
-        self.cfg.hf_config.vocab_size = self.t3conf.speech_tokens_dict_size
-        if hasattr(self.cfg, "vocab_size"):
-            self.cfg.vocab_size = self.t3conf.speech_tokens_dict_size
+        # (vocab_size override moved below speech_head instantiation)
 
         # We initialize the backbone using GPT2LMHeadModel
         # But we don't need its lm_head. We will just use its transformer backbone
@@ -44,12 +40,19 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         self.speech_head = ParallelLMHead(
             num_embeddings=self.t3conf.speech_tokens_dict_size,
             embedding_dim=self.dim,
-            padding_size=1,
+            padding_size=64,
             prefix=prefix + ".speech_head",
         )
 
+        padded_vocab_size = self.speech_head.weight.shape[0]
+        
+        # Override config vocab size so engine expects the padded size (avoids FlashInfer segfault)
+        self.cfg.hf_config.vocab_size = padded_vocab_size
+        if hasattr(self.cfg, "vocab_size"):
+            self.cfg.vocab_size = padded_vocab_size
+
         from vllm.model_executor.layers.logits_processor import LogitsProcessor
-        self.logits_processor = LogitsProcessor(self.t3conf.speech_tokens_dict_size)
+        self.logits_processor = LogitsProcessor(padded_vocab_size)
 
         # To track prefix lengths per sequence
         self.prefix_lengths = {}
@@ -85,9 +88,13 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
         if "speech_pos_emb.emb.weight" in state_dict:
             self.speech_pos_emb.load_state_dict({"emb.weight": state_dict["speech_pos_emb.emb.weight"]}, strict=False)
 
-        # Load speech_head weights (it uses ParallelLMHead so name is weight)
+        # Load speech_head weights (pad if necessary)
         if "speech_head.weight" in state_dict:
-            self.speech_head.load_state_dict({"weight": state_dict["speech_head.weight"]})
+            w = state_dict["speech_head.weight"]
+            pad_size = self.speech_head.weight.shape[0] - w.shape[0]
+            if pad_size > 0:
+                w = torch.nn.functional.pad(w, (0, 0, 0, pad_size), value=0)
+            self.speech_head.load_state_dict({"weight": w})
 
         # Precompute speech pos emb
         speech_position_ids = torch.arange(self.t3conf.max_speech_tokens + 2 + 2, device=self.speech_pos_emb.emb.weight.device)
@@ -171,4 +178,7 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
     def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata=None, *args, **kwargs) -> torch.Tensor:
         # Use our speech head instead of text lm_head
         logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata, *args, **kwargs)
+        # Mask out padded tokens to prevent generating out of bounds
+        if logits.size(-1) > self.t3conf.speech_tokens_dict_size:
+            logits[..., self.t3conf.speech_tokens_dict_size:] = -float("inf")
         return logits
