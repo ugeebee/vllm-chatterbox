@@ -165,20 +165,19 @@ class T3TurboForCausalLM(GPT2LMHeadModel):
             speech_pos_e = self.precomputed_speech_pos_emb[local_speech_positions]
             inputs_embeds = inputs_embeds + speech_pos_e
 
-        # Now we pass it to GPT2 transformer backbone
+        # Now we pass it to GPT2 transformer backbone (V0 signature)
         hidden_states = self.gpt2.transformer(
             input_ids=None,
-            position_ids=positions,
+            positions=positions,
             inputs_embeds=inputs_embeds,
-            intermediate_tensors=intermediate_tensors,
             **kwargs,
         )
         return hidden_states
 
-    def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata=None, *args, **kwargs) -> torch.Tensor:
+    def compute_logits(self, hidden_states: torch.Tensor, sampling_metadata) -> torch.Tensor:
         # Use our speech head instead of text lm_head
-        logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata, *args, **kwargs)
+        logits = self.logits_processor(self.speech_head, hidden_states, sampling_metadata)
         # Mask out padded tokens to prevent generating out of bounds
-        if logits.size(-1) > self.t3conf.speech_tokens_dict_size:
+        if logits is not None and logits.size(-1) > self.t3conf.speech_tokens_dict_size:
             logits[..., self.t3conf.speech_tokens_dict_size:] = -float("inf")
         return logits
